@@ -2,9 +2,11 @@
   <node pkg="see3cam_cu51_driver" type="see3cam_cu51_node" name="see3cam">
     <!-- Parameters used to find the camera -->
     <param name="camera_id" value="1"/>
-    <param name="start_exp" value="1"/>
+    <param name="start_exp" value="10"/>
+    <param name="start_bri" value="10"/>
     <param name="height"    value="1944"/>
     <param name="width"     value="2592"/>
     <param name="hid_port"  value="/dev/see3cam_cu51_hidraw"/>
+    <param name="vid_port"  value="/dev/video1"/>
   </node>
 </launch>

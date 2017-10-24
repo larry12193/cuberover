@@ -13,6 +13,7 @@
 #include <sensor_msgs/Image.h>
 #include <std_msgs/Header.h>
 #include <std_msgs/UInt16.h>
+#include <std_msgs/UInt8.h>
 #include <sensor_msgs/image_encodings.h>
 #include <cv_bridge/cv_bridge.h>
 
@@ -30,9 +31,14 @@ using namespace cv;
 using namespace std;
 
 uint16_t exposure;
+uint8_t  brightness;
 
 void setExposureCallback(const std_msgs::UInt16::ConstPtr& msg) {
   exposure = msg->data;
+}
+
+void setBrightnessCallback(const std_msgs::UInt8::ConstPtr& msg) {
+  brightness = msg->data;
 }
 
 int main (int argc, char **argv) {
@@ -41,11 +47,13 @@ int main (int argc, char **argv) {
   ros::NodeHandle nh;
   ros::NodeHandle priv_nh("~");
 
-  int id, initExposure;
+  int id, initExposure, initBrightness;
   double width, height;
   std::string portName;
+
   priv_nh.param<int>("camera_id", id,     1);
   priv_nh.param<int>("start_exp", initExposure, 5);
+  priv_nh.param<int>("start_bri", initBrightness, 10);
   priv_nh.param<double>("height", height, 1944);
   priv_nh.param<double>("width",  width,  2592);
   priv_nh.param<std::string>("hid_port", portName, "/dev/see3cam_cu51_hidraw");
@@ -54,15 +62,6 @@ int main (int argc, char **argv) {
 	Mat ResultImage, InputImage;
 
   uvccamera uvc(portName);
-
-  ROS_INFO("Attempting to open camera at ID %d with %0.0fx%0.0f resolution",id,width,height);
-	//Open the device at the ID 0
-	_CameraDevice.open(id);
-	if( !_CameraDevice.isOpened()) //Check for the device
-	{
-		ROS_ERROR("No camera found with ID %d", id);
-		return -1;
-	}
 
   // Initialize UVC connection
   bool ret = uvc.initCamera();
@@ -77,10 +76,19 @@ int main (int argc, char **argv) {
     }
   }
 
+  ROS_INFO("Attempting to open camera at ID %d with %0.0fx%0.0f resolution",id,width,height);
+	//Open the device at the ID 0
+	_CameraDevice.open(id);
+	if( !_CameraDevice.isOpened()) //Check for the device
+	{
+		ROS_ERROR("No camera found with ID %d", id);
+		return -1;
+	}
+
 	//Set up the width and height of the camera
 	_CameraDevice.set(CV_CAP_PROP_FRAME_WIDTH,  width);
 	_CameraDevice.set(CV_CAP_PROP_FRAME_HEIGHT, height);
-  _CameraDevice.set(CV_CAP_PROP_EXPOSURE, 20);
+  _CameraDevice.set(CV_CAP_PROP_BRIGHTNESS, (float)initBrightness/100);
 
   // Define image message
   cv_bridge::CvImage out_msg;
@@ -90,7 +98,7 @@ int main (int argc, char **argv) {
 
   // Initialize subscriber
   ros::Subscriber exp_sub = nh.subscribe<std_msgs::UInt16>("/set_exposure", 1000, setExposureCallback);
-
+  ros::Subscriber bri_sub = nh.subscribe<std_msgs::UInt8>("/set_brightness", 1000, setBrightnessCallback);
   // Set loop rate
   ros::Rate loop_rate(10);
 
@@ -104,6 +112,11 @@ int main (int argc, char **argv) {
       } else {
         initExposure = exposure;
       }
+    }
+
+    if( brightness != initBrightness ) {
+      _CameraDevice.set(CV_CAP_PROP_BRIGHTNESS, (float)brightness/100);
+      initBrightness = brightness;
     }
 
     _CameraDevice >> InputImage; //Read the input image
