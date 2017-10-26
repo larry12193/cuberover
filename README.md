@@ -12,11 +12,17 @@ OpenCV 2.4.9 (wtih custom patch)
 
 e-con Systems custom OpenCV 2.4.9 patch (for custom Y16 grayscale image format)
 
-## Installation
+## Personal Computer Installation
 
 ### ROS Indigo
 
 Follow the standard installation steps found at http://wiki.ros.org/indigo/Installation/Ubuntu. Depending on the target application, download the Desktop-Full for a personal computer and the Desktop Install for a more embedded applicaton.
+
+### Dependencies
+```
+sudo apt-get install ros-indigo-libuvc-camrea
+sudo apt-get install v4l-utils
+```
 
 ### OpenCV 2.4.9 with e-con Systems Patch
 
@@ -103,3 +109,83 @@ cd devel/lib/raw_converter
 ./raw_converter -d /path/to/images
 ```
 where you replace '/path/to/images' with the real path to the directory containing the .raw images you wish to convert. The converted images will show up in a directory named 'jpgs' in the raw images path directory.
+
+## Setting up the ODROID
+
+Kernel building and installation instructions sourced from:
+https://github.com/umiddelb/armhf/wiki/How-To-compile-a-custom-Linux-kernel-for-your-ARM-device
+
+#### Download 14.04 image
+```
+com.odroid.com/sigong/nf_file_board/nfile_board_view.php?keyword&tag&bid=241
+```
+
+#### Flash the OS image
+```
+sudo dd if=<my/odroid/image.img> of=</dev/path/of/card> bs=1M conv=fsync
+sync
+````
+Replace ```my/odroid/image.img``` with the path to the image downloaded in the last step. ```/dev/path/of/card``` is the path to the target storage device in terms of the /dev folder. Use ```sudo lsblk``` or ```sudo fdisk -l``` to figure out what the right ```/dev/*``` path is.
+
+#### Install the flash memory in the ODROID and boot it up
+
+#### Install dependencies
+```
+sudo apt-get -y install bc curl gcc git libncurses5-dev lzop make u-boot-tools
+```
+
+### Install and set gcc-5 as your default compiler
+```
+sudo apt-get -y install python-software-properties;
+sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test;
+sudo apt-get update
+sudo apt-get -y install gcc-5 g++-5
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
+sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 50
+```
+
+Verify it worked by calling the following, it should say something about gcc-5.x
+```
+gcc --version
+```
+
+#### Download linux kernel v4.2 for the ODROID XU4 from
+```
+https://github.com/tobetter/linux/archive/odroidxu4-v4.2.tar.gz
+```
+
+#### Uncompress the kernel source and build the configuration file for the xu4
+```
+cd linux-odroidxu4-4.2.y
+make odroidxu4_defconfig
+```
+
+#### Configure the kernel using the menuconfig for HIDRAW enabled
+```
+make menuconfig
+```
+Navigate to and enable the following
+```
+Device Drivers ---> HID support ---> /dev/hidraw raw HID device support
+Device Drivers ---> Multimedia support ---> Cameras/video grabbers support
+Device Drivers ---> Multimedia support ---> Enable advanced debug functionality on V4L2 drivers
+Device Drivers ---> Multimedia support ---> Media USB Adapters
+Device Drivers ---> Multimedia support ---> V4L platform devices
+Device Drivers ---> Multimedia support ---> Media USB Adapters ---> USB Video Class (UVC)
+Device Drivers ---> Multimedia support ---> Media USB Adapters ---> UVC input events device support
+```
+ 
+#### Make the kernel and its modules/firmware and install
+```
+make -j 8 zImage dtbs modules
+sudo cp arch/arm/boot/zImage arch/arm/boot/dts/*.dtb /media/boot
+sudo make modules_install
+sudo make firmware_install
+sudo make headers_install INSTALL_HDR_PATH=/usr
+kver=`make kernelrelease`
+sudo cp .config /boot/config-${kver}
+cd /boot
+sudo update-initramfs -c -k ${kver}
+sudo mkimage -A arm -O linux -T ramdisk -a 0x0 -e 0x0 -n initrd.img-${kver} -d initrd.img-${kver} uInitrd-${kver}
+sudo cp uInitrd-${kver} /media/boot/uInitrd
+```

@@ -41,6 +41,7 @@ bool uvccamera::initCamera() {
     perror("Unable to open hidraw device!");
     return false;
   }
+  enableMasterMode();
   return true;
 }
 

@@ -10,7 +10,6 @@ project(raw_converter)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
-  msgs
   std_msgs
   sensor_msgs
   rosbag
