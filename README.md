@@ -174,7 +174,7 @@ Device Drivers ---> Multimedia support ---> V4L platform devices
 Device Drivers ---> Multimedia support ---> Media USB Adapters ---> USB Video Class (UVC)
 Device Drivers ---> Multimedia support ---> Media USB Adapters ---> UVC input events device support
 ```
- 
+
 #### Make the kernel and its modules/firmware and install
 ```
 make -j 8 zImage dtbs modules
@@ -189,3 +189,13 @@ sudo update-initramfs -c -k ${kver}
 sudo mkimage -A arm -O linux -T ramdisk -a 0x0 -e 0x0 -n initrd.img-${kver} -d initrd.img-${kver} uInitrd-${kver}
 sudo cp uInitrd-${kver} /media/boot/uInitrd
 ```
+
+## Initializing the CAN bus interface
+
+#### Define CAN socket
+Ensure that the USB-to-CAN adapter is plugged in and powered. The following will set up the adapter as a network socket and define its bit rate to 1Mbps.
+```
+sudo ip link set can0 type can bitrate 1000000
+sudo ip link set up can0
+```
+Run ```ifconfig``` to ensure the device has been successfully created and brought up.
