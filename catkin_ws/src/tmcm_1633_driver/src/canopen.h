@@ -9,6 +9,9 @@
 #ifndef CANOPEN_H
 #define CANOPEN_H
 
+#include "ros/ros.h"
+#include "tmcm_1633_driver/canMsg.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -74,16 +77,20 @@ private:
   struct ifreq _ifr;
   uint8_t _s;
   uint8_t _nbytes;
-  string _ifname;
+  std::string _ifname;
+
+  ros::Publisher _bus_pub;
+  tmcm_1633_driver::canMsg _canmsg;
 
 public:
-  canopen(string socket_name);
+  canopen(std::string socket_name, ros::NodeHandle *nh);
   ~canopen();
 
   int8_t init();
-  int8_t sdo_write(uin8_t nodeID, co_obj_t reg, uint8_t *data);
-  int8_t sdo_read(uint8_t nodeID, co_obj_t reg, uint8_t *data);
+  int8_t sdo_write(uint8_t nodeID, co_obj_t reg, uint8_t *data);
+  int8_t sdo_read(uint8_t nodeID, co_obj_t reg);
   int8_t send_nmt(uint8_t nodeID, uint8_t mode);
+  void read_bus(const ros::TimerEvent& e);
 };
 
 #endif // CANOPEN_H

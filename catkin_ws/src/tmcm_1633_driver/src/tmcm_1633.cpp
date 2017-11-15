@@ -8,7 +8,6 @@
  ******************************************************************************/
 
 #include "tmcm_1633.h"
-#include "canopen.h"
 
 // Constructor
 tmcm_1633::tmcm_1633(uint8_t nodeID, canopen *canbase) {
@@ -27,7 +26,7 @@ tmcm_1633::~tmcm_1633() {
 int8_t tmcm_1633::init_motor() {
   // Reset the NMT state machine
   _nmt_state = NMT_BOOT;
-  return _canbase->set_nmt_state(_nodeID, NMT_CMD_RST);
+  return _canbase->send_nmt(_nodeID, NMT_CMD_RST);
 }
 
 /*  @brief Sets the mode of operation of the motor driver
@@ -62,21 +61,13 @@ int8_t tmcm_1633::read_pos() {
   return _canbase->sdo_read(_nodeID, ACTUAL_POS_OBJ);
 }
 
-/*  @brief Reads encoder position counter
-
-*/
-int8_t tmcm_1633::read_pos() {
-  // Send off request for position, handled by process_message callback
-  return _canbase->sdo_read(_nodeID, ACTUAL_POS_OBJ);
-}
-
 /*  @brief Sets the NMT state machine
 
 */
 int8_t tmcm_1633::set_nmt_state(uint8_t mode) {
   // Reset the NMT state machine
   _nmt_state = mode;
-  return _canbase->set_nmt_state(_nodeID, mode);
+  return _canbase->send_nmt(_nodeID, mode);
 }
 
 /*  @brief Gets current state of NMT
@@ -105,7 +96,7 @@ int8_t tmcm_1633::process_message(can_frame *frame) {
       // Driver responds from SDO read request
       case SDO_TRANSMIT:
         if( (frame->data[1] & (frame->data[2] << 8)) == ACTUAL_POS_OBJ.index ) {
-          _pos = frame->data[4] || (frame->data[5] << 8) || (frame->data[6] << 16) || (frame->data[7] << 24);
+          pos = frame->data[4] || (frame->data[5] << 8) || (frame->data[6] << 16) || (frame->data[7] << 24);
         }
         break;
     }

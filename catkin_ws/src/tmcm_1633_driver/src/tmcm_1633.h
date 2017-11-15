@@ -12,9 +12,9 @@
 
 #include "canopen.h"
 
-#define POSITION_MODE 0x01
-#define VELOCITY_MODE 0x03
-#define TORQUE_MODE   0x0A
+#define POS_MODE           0x01
+#define VEL_MODE           0x03
+#define TOR_MODE           0x0A
 
 #define CONTROL_SHUTDOWN   0x06
 #define CONTROL_SWITCH_ON  0x07
@@ -142,7 +142,6 @@ class tmcm_1633 {
 private:
   uint8_t _nodeID;
   uint8_t _nmt_state;
-  int32_t _pos;
 
   uint8_t data[4];
 
@@ -152,10 +151,12 @@ public:
   tmcm_1633(uint8_t nodeID, canopen *canbase);
   ~tmcm_1633();
 
+  int32_t pos;
+
   int8_t init_motor();
   int8_t set_mode(uint8_t mode);
   int8_t set_vel(int32_t vel);
-  int8_t read_pos(int32_t *pos);
+  int8_t read_pos();
   int8_t set_nmt_state(uint8_t state);
   int8_t get_nmt_state();
   int8_t process_message(can_frame *frame);
