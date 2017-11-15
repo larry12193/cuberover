@@ -18,7 +18,7 @@
 
 #define CONTROL_SHUTDOWN   0x06
 #define CONTROL_SWITCH_ON  0x07
-#define CONTROL_SW_ON_ENBL 0x0F
+#define CONTROL_OP_ENABLE  0x0F
 
 #define OVERCURRENT_FLAG   0
 #define UNDERVOLTAGE_FLAG  1
@@ -45,6 +45,13 @@ const co_obj_t STORE_PARAM_OBJ = {
   .index = 0x1010,
   .subindex = 0x01,
   .size = 4
+};
+
+// Limit Switches
+const co_obj_t LIMIT_SWITCH_OBJ = {
+    .index = 0x2005,
+    .subindex = 0x00,
+    .size = 4
 };
 
 // Status Flags
@@ -147,19 +154,22 @@ private:
 
   canopen * _canbase;
 
+  ros::Subscriber _can_sub;
+
 public:
-  tmcm_1633(uint8_t nodeID, canopen *canbase);
+  tmcm_1633(uint8_t nodeID, canopen *canbase, ros::NodeHandle *nh);
   ~tmcm_1633();
 
   int32_t pos;
 
   int8_t init_motor();
+  uint8_t ready();
   int8_t set_mode(uint8_t mode);
   int8_t set_vel(int32_t vel);
   int8_t read_pos();
   int8_t set_nmt_state(uint8_t state);
   int8_t get_nmt_state();
-  int8_t process_message(can_frame *frame);
+  void process_message(const tmcm_1633_driver::canMsg::ConstPtr& msg);
 };
 
 #endif // TMCM_1633_H

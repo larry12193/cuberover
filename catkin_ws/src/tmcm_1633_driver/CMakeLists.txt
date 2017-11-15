@@ -5,6 +5,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  sensor_msgs
   message_generation
 )
 
@@ -18,6 +19,7 @@ generate_messages(DEPENDENCIES std_msgs)
 catkin_package(CATKIN_DEPENDS
                message_runtime
                std_msgs
+               sensor_msgs
 )
 
 

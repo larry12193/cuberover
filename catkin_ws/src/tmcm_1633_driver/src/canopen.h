@@ -14,9 +14,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <poll.h>
 #include <unistd.h>
 #include <string>
-
 #include <net/if.h>
 #include <inttypes.h>
 #include <sys/types.h>
@@ -62,6 +62,7 @@
 #define NMT_CMD_RST   0x81   // NMT reset command
 #define NMT_CMD_RSTC  0x82   // NMT reset communications command
 
+#define NMT_RST_TIMEOUT 5
 
 typedef struct co_obj_t {
   uint16_t index;     // SDO index
@@ -78,6 +79,11 @@ private:
   uint8_t _s;
   uint8_t _nbytes;
   std::string _ifname;
+  struct pollfd _fds[200];
+  int _nfds;
+  int _timeout;
+  int _rc;
+
 
   ros::Publisher _bus_pub;
   tmcm_1633_driver::canMsg _canmsg;

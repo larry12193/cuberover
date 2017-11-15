@@ -10,9 +10,11 @@
 #include "tmcm_1633.h"
 
 // Constructor
-tmcm_1633::tmcm_1633(uint8_t nodeID, canopen *canbase) {
+tmcm_1633::tmcm_1633(uint8_t nodeID, canopen *canbase, ros::NodeHandle *nh) {
   _nodeID = nodeID;
   _canbase = canbase;
+
+  _can_sub = nh->subscribe<tmcm_1633_driver::canMsg>("/can_messages",100, &tmcm_1633::process_message, this);
 }
 
 // Destructor
@@ -29,6 +31,13 @@ int8_t tmcm_1633::init_motor() {
   return _canbase->send_nmt(_nodeID, NMT_CMD_RST);
 }
 
+/* @brief Returns whether or not the motor is ready after reset
+
+*/
+uint8_t tmcm_1633::ready() {
+    return _nmt_state != NMT_BOOT;
+}
+
 /*  @brief Sets the mode of operation of the motor driver
       1: Position mode
       3: Velocity mode
@@ -36,9 +45,112 @@ int8_t tmcm_1633::init_motor() {
 
 */
 int8_t tmcm_1633::set_mode(uint8_t mode) {
-  // Write state to dictionary via SDO
-  data[0] = mode;
-  return _canbase->sdo_write(_nodeID, OPERATION_MODE_OBJ, data);
+
+    // Make sure the node is in operational mode
+    if(_nmt_state != NMT_OPERATE ) {
+        if( _canbase->send_nmt(_nodeID, NMT_CMD_OP) < 0 ) {
+            perror("Unable to set node to operational");
+            return -2;
+        }
+    }
+
+    // Initialize depending on which mode
+    switch(mode) {
+        // Velocity mode
+        case VEL_MODE:
+            // Fill in mode data in can bus message data
+            data[0] = mode;
+            if( _canbase->sdo_write(_nodeID, OPERATION_MODE_OBJ, data) < 0) {
+                perror("Error changing mode via SDO");
+                return -1;
+            }
+            ros::spinOnce();
+            // Reset control sequence
+            data[0] = CONTROL_SHUTDOWN;
+            data[1] = 0x00;
+            if( _canbase->sdo_write(_nodeID, CONTROL_WORD_OBJ, data) < 0) {
+                perror("Unable to reset control sequence.");
+                return -1;
+            }
+            ros::spinOnce();
+            ros::Duration(0.1).sleep();
+            // Set control sequence to switched_on state
+            data[0] = CONTROL_SWITCH_ON;
+            data[1] = 0x00;
+            if( _canbase->sdo_write(_nodeID, CONTROL_WORD_OBJ, data) < 0) {
+                perror("Unable to set to switched on state.");
+                return -1;
+            }
+            ros::spinOnce();
+            // Initialize velocity as zero rpm
+            data[0] = 0x00;
+            data[1] = 0x00;
+            data[2] = 0x00;
+            data[3] = 0x00;
+            if( _canbase->sdo_write(_nodeID, TARG_VEL_OBJ, data) < 0) {
+                perror("Unable to set to initial velocity.");
+                return -1;
+            }
+            ros::spinOnce();
+            // Set control sequence to operation_enabled
+            data[0] = CONTROL_OP_ENABLE;
+            data[1] = 0x00;
+            if( _canbase->sdo_write(_nodeID, CONTROL_WORD_OBJ, data) < 0) {
+                perror("Unable to set to operation enabled state.");
+                return -1;
+            }
+            ros::spinOnce();
+            break;
+
+        // Torque mode
+        case TOR_MODE:
+            // Disable limit switch inputs
+            data[0] = 0x03;
+            data[1] = 0x00;
+            data[2] = 0x00;
+            data[3] = 0x00;
+            if( _canbase->sdo_write(_nodeID, LIMIT_SWITCH_OBJ, data) < 0) {
+                perror("Unable to disable limit switch inputs.");
+                return -1;
+            }
+            // Fill in mode data in can bus message data
+            data[0] = mode;
+            if( _canbase->sdo_write(_nodeID, OPERATION_MODE_OBJ, data) < 0) {
+                perror("Error changing mode via SDO");
+                return -1;
+            }
+            // Reset control sequence
+            data[0] = CONTROL_SHUTDOWN;
+            if( _canbase->sdo_write(_nodeID, CONTROL_WORD_OBJ, data) < 0) {
+                perror("Unable to reset control sequence.");
+                return -1;
+            }
+            // Set control sequence to switched_on state
+            data[0] = CONTROL_SWITCH_ON;
+            if( _canbase->sdo_write(_nodeID, CONTROL_WORD_OBJ, data) < 0) {
+                perror("Unable to set to switched on state.");
+                return -1;
+            }
+            // Initialize torque to 0 mA
+            data[0] = 0x00;
+            data[1] = 0x00;
+            data[2] = 0x00;
+            data[3] = 0x00;
+            if( _canbase->sdo_write(_nodeID, TARG_TORQUE_OBJ, data) < 0) {
+                perror("Unable to set initial torque.");
+                return -1;
+            }
+            // Set control sequence to operation_enabled
+            data[0] = CONTROL_OP_ENABLE;
+            if( _canbase->sdo_write(_nodeID, CONTROL_WORD_OBJ, data) < 0) {
+                perror("Unable to set to operation enabled state.");
+                return -1;
+            }
+            break;
+        default:
+            ROS_WARN("Unknown controller state requested!");
+            break;
+    }
 }
 
 /*  @brief Sets target velocity
@@ -80,25 +192,22 @@ int8_t tmcm_1633::get_nmt_state() {
 /*  @brief Gets current state of NMT
 
 */
-int8_t tmcm_1633::process_message(can_frame *frame) {
-  // Extract nodeID from message
-  uint8_t  frame_nodeID = (uint8_t)(frame->can_id & 0x0FF);
-  uint16_t frame_cobID  = frame->can_id & 0xFF0;
-  // Only process data if the message is from associated driver
-  if( frame_nodeID == _nodeID ) {
-    switch(frame_cobID) {
+void tmcm_1633::process_message(const tmcm_1633_driver::canMsg::ConstPtr& msg) {
+    if( msg->nodeID == _nodeID ) {
+        // Process by COB ID
+        switch(msg->cobID) {
 
-      // Driver responsed to NMT reset
-      case NMT_RESPONSE:
-        _nmt_state = NMT_PREOP;
-        break;
+          // Driver responsed to NMT reset
+          case NMT_RESPONSE:
+            _nmt_state = NMT_PREOP;
+            break;
 
-      // Driver responds from SDO read request
-      case SDO_TRANSMIT:
-        if( (frame->data[1] & (frame->data[2] << 8)) == ACTUAL_POS_OBJ.index ) {
-          pos = frame->data[4] || (frame->data[5] << 8) || (frame->data[6] << 16) || (frame->data[7] << 24);
+          // Driver responds from SDO read request
+          case SDO_TRANSMIT:
+            if( msg->reg == ACTUAL_POS_OBJ.index ) {
+              pos = msg->data[0] || (msg->data[1] << 8) || (msg->data[2] << 16) || (msg->data[3] << 24);
+            }
+            break;
         }
-        break;
     }
-  }
 }
