@@ -1,0 +1,31 @@
+; C:\Users\Lawrence-Windows\Desktop\tmcm_1633_set_velocity.xmt
+; CAN messages saved by PCAN-View 4.1.3
+;
+; Columns descriptions:
+; ~~~~~~~~~~~~~~~~~~~~~
+; +Message ID
+; |            +Cycle time in ms (0=manual)
+; |            |  +Data length
+; |            |  |  +Frame type
+; |            |  |  |  +Message data
+; |            |  |  |  |
+000h           0  2  D 01h 00h ; Go Operational
+601h           0  5  D 2Fh 60h 60h 00h 03h ; Set to velocity mode
+601h           0  6  D 2Bh 40h 60h 00h 06h 00h ; switch to READ_TO_SWITCH_ON state
+601h           0  6  D 2Bh 40h 60h 00h 07h 00h ; switch to SWITCHED_ON state
+601h           0  8  D 23h FFh 60h 00h 3Eh 08h 00h 00h ; Set target velocity (1000 rpm)
+601h           0  5  D 2Bh 40h 60h 00h 0Fh ; switch to OPERATION_ENABLED state
+601h           0  8  D 23h FFh 60h 00h 00h 00h 00h 00h ; Set target velocity to zero
+601h           0  5  D 2Bh 40h 60h 00h 00h ; switch to DISABLED state
+000h           0  2  D 81h 00h ; NMT reset
+000h           0  2  D 01h 00h ; Go Operational
+000h           0  2  D 01h 00h ; Go Operational
+000h           0  2  D 01h 00h ; Go Operational
+602h           0  5  D 2Fh 60h 60h 00h 03h ; Set to velocity mode
+602h           0  6  D 2Bh 40h 60h 00h 06h 00h ; switch to READ_TO_SWITCH_ON state
+602h           0  6  D 2Bh 40h 60h 00h 07h 00h ; switch to SWITCHED_ON state
+602h           0  8  D 23h FFh 60h 00h 3Eh 08h 00h 00h ; Set target velocity (1000 rpm)
+602h           0  5  D 2Bh 40h 60h 00h 0Fh ; switch to OPERATION_ENABLED state
+602h           0  8  D 23h FFh 60h 00h 00h 00h 00h 00h ; Set target velocity to zero
+602h           0  5  D 2Bh 40h 60h 00h 00h ; switch to DISABLED state
+000h           0  2  D 81h 00h ; NMT reset

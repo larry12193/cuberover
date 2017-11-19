@@ -149,7 +149,7 @@ void canopen::read_bus(const ros::TimerEvent& e) {
     _rc = poll(_fds, _nfds, _timeout);
 
     if( _rc > 0 ) {
-        ROS_INFO("reading bus, count = %d",_nfds);
+        //ROS_INFO("reading bus, count = %d",_nfds);
         _nbytes = read(_s, &_frame, sizeof(struct can_frame));
         if( _nbytes == sizeof(struct can_frame)) {
             // Fill in time stamp

@@ -29,6 +29,10 @@
 
 bool resetNodes = false;
 bool changeVel = false;
+
+float THRUST_DEAD_ZONE;
+float TURN_DEAD_ZONE;
+
 int32_t leftVel = 0;
 int32_t rightVel = 0;
 
@@ -40,14 +44,19 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& msg) {
 
     if( std::fabs(msg->axes[1]) > 0.1 ) {
         changeVel = true;
-        ROS_INFO("Setting velocity to  %X, from %f",(int32_t)(msg->axes[1]*1000.0),msg->axes[1]);
+        //ROS_INFO("Setting velocity to  %X, from %f",(int32_t)(msg->axes[1]*1000.0),msg->axes[1]);
         leftVel = (int32_t)(msg->axes[1]*1000.0);
-        rightVel = leftVel;
+        rightVel = -leftVel;
     } else {
         changeVel = true;
-        ROS_INFO("Setting velocity to  %d",(int32_t)(msg->axes[1]*1000.0));
+        //ROS_INFO("Setting velocity to  %d",(int32_t)(msg->axes[1]*1000.0));
         leftVel = 0;
         rightVel = leftVel;
+    }
+
+    if( std::fabs(msg->axes[3]) > 0.1 ) {
+        leftVel += (int32_t)(msg->axes[3]*1000.0);
+        rightVel += (int32_t)(msg->axes[3]*1000.0);
     }
 }
 
@@ -73,8 +82,8 @@ int main(int argc, char **argv) {
     ros::Timer can_read = nh.createTimer(ros::Duration(0.1), &canopen::read_bus, &canbase);
 
     // Create and initialize motor driver objects
-    tmcm_1633 motorR(0x01, &canbase, &nh);
-    tmcm_1633 motorL(0x02, &canbase, &nh);
+    tmcm_1633 motorR(0x02, &canbase, &nh);
+    tmcm_1633 motorL(0x01, &canbase, &nh);
 
     // Initialize drivers
     motorR.init_motor();
