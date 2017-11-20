@@ -149,14 +149,18 @@ Verify it worked by calling the following, it should say something about gcc-5.x
 gcc --version
 ```
 
-#### Download linux kernel v4.2 for the ODROID XU4 from
+### Kernel Configuration
+
+#### Download the kernel for ODROID XU4 and uncompress
 ```
-https://github.com/tobetter/linux/archive/odroidxu4-v4.2.tar.gz
+cd ~
+wget https://github.com/tobetter/linux/archive/odroidxu4-v4.2.tar.gz
+tar -xzf odroidxu4-v4.2.tar.gz
 ```
 
 #### Uncompress the kernel source and build the configuration file for the xu4
 ```
-cd linux-odroidxu4-4.2.y
+cd odroidxu4-v4.2
 make odroidxu4_defconfig
 ```
 
@@ -173,6 +177,9 @@ Device Drivers ---> Multimedia support ---> Media USB Adapters
 Device Drivers ---> Multimedia support ---> V4L platform devices
 Device Drivers ---> Multimedia support ---> Media USB Adapters ---> USB Video Class (UVC)
 Device Drivers ---> Multimedia support ---> Media USB Adapters ---> UVC input events device support
+Networking Support --> CAN bus subsystem support --> CAN Device Drives --> Virtual Local CAN Interface (vcan)
+Networking Support --> CAN bus subsystem support --> CAN Device Drives --> Serial/USB serial CAN Adaptors (slcan)
+Networking Support --> CAN bus subsystem support --> CAN Device Drives --> CAN USB interfaces --> PEAK PCAN-USB/USB Pro interfaces for CAN 2.0b/CAN-FS
 ```
 
 #### Make the kernel and its modules/firmware and install
@@ -190,10 +197,13 @@ sudo mkimage -A arm -O linux -T ramdisk -a 0x0 -e 0x0 -n initrd.img-${kver} -d i
 sudo cp uInitrd-${kver} /media/boot/uInitrd
 ```
 
+Reboot for changes to take effect.
+
 ## Initializing the CAN bus interface
 
 #### Define CAN socket
-Ensure that the USB-to-CAN adapter is plugged in and powered. The following will set up the adapter as a network socket and define its bit rate to 1Mbps.
+Ensure that the USB-to-CAN adapter is plugged in and powered. Verify that the can device is found by observing the output of ```ifconfig -a```, there should be a can0 device.
+The following will set up the adapter as a network socket and define its bit rate to 1Mbps.
 ```
 sudo ip link set can0 type can bitrate 1000000
 sudo ip link set up can0
